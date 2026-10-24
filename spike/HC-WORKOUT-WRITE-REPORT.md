@@ -29,8 +29,8 @@ The prototype is about 300 lines of Dart plus one manifest line:
 
 **Results:** `flutter analyze` finds no issues across the whole project.
 `flutter test test/features/health` passes all 163 tests (130 existing + 33
-new). `dart format` is clean at the repo's 100-column width. APK build: blocked by
-Maven Central rate limiting (HTTP 429); see "Build".
+new). `dart format` is clean at the repo's 100-column width. A debug APK builds (with a
+Maven mirror workaround for this VM); see "Build".
 
 **What a Health Connect workout can't carry:** sets, reps, weights and RiR.
 Health Connect gets "Strength training, 09:00–10:15, *Leg day*", and the
@@ -194,18 +194,26 @@ range, which we have.
 
 ## Build
 
-**APK: not built.** I ran `flutter build apk --debug --target-platform
-android-arm64` twice, with Android SDK `platforms;android-37.0`,
-`build-tools;37.0.0` and NDK `28.2.13676358` installed through the command-line
-tools. Both runs failed while Gradle was still configuring: Maven Central
-(`repo.maven.apache.org`) answered HTTP **429 Too Many Requests** for Kotlin
-Gradle plugin and gRPC POMs. The second run used `org.gradle.workers.max=2`.
-No Dart or Kotlin compile step was reached.
+**APK: built.** `flutter build apk --debug --target-platform android-arm64`
+succeeded (`app-debug.apk`, 141 MB, Gradle about 8.5 min). It used Android SDK
+`platforms;android-37.0`, `build-tools;37.0.0` and NDK `28.2.13676358`; Gradle
+installed CMake 3.22.1 itself. `aapt2 dump permissions` on the APK lists
+`android.permission.health.WRITE_EXERCISE` next to the 13 existing Health
+Connect read permissions, so the merged manifest carries the new permission.
+The plugin's Kotlin, including `HealthWorkoutOperations`, compiled with the
+app's AGP 9.2.1 / Kotlin 2.3.20 setup.
 
-The plugin's Kotlin is unchanged, and wger already builds it in CI, so the only
-new Android input is one `<uses-permission>` line. The build's main risk is low
-but untested. To check: run `flutter build apk --debug` locally or in this
-fork's CI, or retry here later or with a Maven mirror.
+Getting there needed an environment-only workaround, with no repo change.
+Maven Central (`repo.maven.apache.org`) throttled this VM: the same existing
+POM came back as 404, 429 or 200 at random. Gradle takes a 404 as "artifact
+does not exist", so plain retries failed. A Gradle init script
+(`~/.gradle/init.d/maven-mirror.gradle`, copy in `spike/maven-mirror.gradle`) rewrites Maven Central URLs to
+Google's mirror `https://maven-central.storage-download.googleapis.com/maven2/`.
+It also lists that mirror first in `pluginManagement`, with
+`gradlePluginPortal()` and `google()` re-added. A first attempt that added
+repositories per project broke `PREFER_SETTINGS` in Flutter's included Gradle
+build. The first run after that needed `--refresh-dependencies` to clear the
+misses Gradle had cached during the throttling.
 
 ## Environment notes (for HOW-TO-RUN)
 
@@ -214,7 +222,10 @@ The session's environment didn't match the brief:
 * there was no `/opt/flutter`, no JDK 17 and `ANDROID_HOME` was unset;
 * the `dart` MCP server failed to start (no `dart` on PATH);
 * every git push got a 403 from GitHub until the GitHub connection was
-  fixed, near the end of the session.
+  fixed, near the end of the session;
+* Maven Central throttled Gradle with spurious 404/429 responses. Worked
+  around with a Gradle init script that points to Google's Maven Central
+  mirror (see "Build"). The environment's setup script could install it.
 
 Flutter 3.47.7 was installed from `storage.googleapis.com` into
 `/home/user/sdk/flutter`. `dl.google.com` and `storage.googleapis.com` were

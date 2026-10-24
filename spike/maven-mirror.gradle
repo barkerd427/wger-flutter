@@ -1,0 +1,28 @@
+// Environment-only workaround: Maven Central throttles this cloud VM with
+// spurious 404/429s, so send its lookups to Google's Maven Central mirror.
+def mirror = 'https://maven-central.storage-download.googleapis.com/maven2/'
+def centralHosts = ['repo.maven.apache.org', 'repo1.maven.org']
+
+def rewrite = { RepositoryHandler repos ->
+    repos.withType(MavenArtifactRepository).configureEach { r ->
+        if (centralHosts.contains(r.url?.host)) {
+            r.url = mirror
+        }
+    }
+}
+
+beforeSettings { settings ->
+    // The plugin portal redirects library lookups to Maven Central; ask the mirror first
+    settings.pluginManagement.repositories { r ->
+        r.maven { url mirror }
+        // Declaring any repository drops the implicit defaults, so keep them
+        r.gradlePluginPortal()
+        r.google()
+    }
+    rewrite(settings.pluginManagement.repositories)
+    rewrite(settings.dependencyResolutionManagement.repositories)
+}
+beforeProject { project ->
+    rewrite(project.buildscript.repositories)
+    rewrite(project.repositories)
+}
