@@ -30,8 +30,8 @@ The prototype is about 300 lines of Dart plus one manifest line:
 
 **Results:** `flutter analyze` finds no issues across the whole project.
 `flutter test test/features/health` passes all 163 tests (130 existing + 33
-new). `dart format` is clean at the repo's 100-column width. APK build: see
-"Build" below.
+new). `dart format` is clean at the repo's 100-column width. APK build: blocked by
+Maven Central rate limiting (HTTP 429); see "Build".
 
 **What a Health Connect workout can't carry:** sets, reps, weights and RiR.
 Health Connect gets "Strength training, 09:00–10:15, *Leg day*", and the
@@ -195,10 +195,18 @@ range, which we have.
 
 ## Build
 
-See the "APK build" line in the commit log for the outcome of
-`flutter build apk --debug --target-platform android-arm64`. It used Android
-SDK `platforms;android-37.0`, `build-tools;37.0.0` and NDK `28.2.13676358`,
-installed with the command-line tools into `/home/user/sdk/android`.
+**APK: not built.** I ran `flutter build apk --debug --target-platform
+android-arm64` twice, with Android SDK `platforms;android-37.0`,
+`build-tools;37.0.0` and NDK `28.2.13676358` installed through the command-line
+tools. Both runs failed while Gradle was still configuring: Maven Central
+(`repo.maven.apache.org`) answered HTTP **429 Too Many Requests** for Kotlin
+Gradle plugin and gRPC POMs. The second run used `org.gradle.workers.max=2`.
+No Dart or Kotlin compile step was reached.
+
+The plugin's Kotlin is unchanged, and wger already builds it in CI, so the only
+new Android input is one `<uses-permission>` line. The build's main risk is low
+but untested. To check: run `flutter build apk --debug` locally or in this
+fork's CI, or retry here later or with a Maven mirror.
 
 ## Environment notes (for HOW-TO-RUN)
 
