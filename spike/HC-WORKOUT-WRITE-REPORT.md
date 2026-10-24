@@ -1,9 +1,8 @@
 # Spike B: writing wger workout sessions to Health Connect
 
-**Branch:** `claude/hc-workout-write-550i8y` (local commits only, see "Push status").
-The requested `spike/hc-workout-write` was refused too: every push from this
-session returned HTTP 403 ("Claude doesn't have GitHub access to
-barkerd427/wger-flutter"), on both branch names.
+**Branch:** `spike/hc-workout-write`, with the same commits on
+`claude/hc-workout-write-550i8y`. Pushes returned HTTP 403 for most of the
+session, until GitHub access was fixed.
 **Base:** `master` @ `5dd00d6`. Flutter 3.47.7, the version pinned in
 `.github/actions/flutter-common/action.yml`.
 **Status:** feasibility prototype, not a feature. No UI wiring, never run on a
@@ -214,8 +213,8 @@ The session's environment didn't match the brief:
 
 * there was no `/opt/flutter`, no JDK 17 and `ANDROID_HOME` was unset;
 * the `dart` MCP server failed to start (no `dart` on PATH);
-* every git push got a 403 from GitHub (the app has no access to this repo for
-  the org).
+* every git push got a 403 from GitHub until the GitHub connection was
+  fixed, near the end of the session.
 
 Flutter 3.47.7 was installed from `storage.googleapis.com` into
 `/home/user/sdk/flutter`. `dl.google.com` and `storage.googleapis.com` were
