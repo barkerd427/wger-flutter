@@ -25,6 +25,7 @@ import 'package:health_bridge/health.dart';
 import 'package:logging/logging.dart';
 import 'package:wger/features/health/models/health_metric.dart';
 import 'package:wger/features/health/models/health_reading.dart';
+import 'package:wger/features/health/models/workout_export.dart';
 
 final healthRepositoryProvider = Provider<HealthRepository>((ref) {
   return HealthRepository();
@@ -187,6 +188,82 @@ class HealthRepository {
       );
     }
     return true;
+  }
+
+  /// Whether workouts can be written here: Health Connect only, for now.
+  ///
+  /// The plugin's export works on iOS too, but HealthKit wants its own
+  /// NSHealthUpdateUsageDescription and a review of what Apple Health shows
+  /// for a strength workout, both outside this prototype.
+  bool get canWriteWorkouts => !kIsWeb && Platform.isAndroid;
+
+  /// Whether the platform lets us write workouts, without showing a dialog.
+  Future<bool> isWorkoutWriteAuthorized() async {
+    await _health.configure();
+    try {
+      final snapshot = await _health.getAuthorizationSnapshot(const [HealthDataType.WORKOUT]);
+      return snapshot.available &&
+          snapshot.forType(HealthDataType.WORKOUT).write == HealthAuthorizationState.authorized;
+    } catch (e) {
+      _logger.warning('Could not read the workout write authorization: $e');
+      return false;
+    }
+  }
+
+  /// Ensures WRITE access to workouts, requesting it if needed.
+  ///
+  /// Shows the platform's permission dialog, so only call this from a path the
+  /// user started themselves. Asked separately from the read types of the
+  /// import, so turning on one never asks for the other's permissions.
+  Future<bool> ensureWorkoutWriteAuthorized() async {
+    if (await isWorkoutWriteAuthorized()) {
+      return true;
+    }
+    // As in [ensureAuthorized], only the snapshot afterwards is the answer
+    await _health.requestAuthorization(
+      const [HealthDataType.WORKOUT],
+      permissions: const [HealthDataAccess.WRITE],
+    );
+    return isWorkoutWriteAuthorized();
+  }
+
+  /// Writes [export] as one workout record, see the plugin's
+  /// `writeWorkoutData` for what each status means.
+  Future<HealthWorkoutWriteResult> writeWorkout(WorkoutExport export) async {
+    await _health.configure();
+    return _health.writeWorkoutData(
+      workoutClientRecordId: export.clientRecordId,
+      clientRecordVersion: 0,
+      activityType: export.activityType,
+      start: export.start,
+      end: export.end,
+      startZoneOffsetSeconds: export.startZoneOffsetSeconds,
+      endZoneOffsetSeconds: export.endZoneOffsetSeconds,
+      title: export.title,
+      // The times are typed or confirmed in the session form, nothing was
+      // measured by a sensor during the workout
+      recordingProvenance: HealthRecordingProvenance.manualEntry,
+      recordingDevice: HealthRecordingDevice.phone,
+    );
+  }
+
+  /// Whether the workout of [export] is stored on the platform.
+  Future<HealthWorkoutLookupResult> lookupWorkout(WorkoutExport export) async {
+    await _health.configure();
+    return _health.lookupWorkoutData(
+      workoutClientRecordId: export.clientRecordId,
+      start: export.start,
+      end: export.end,
+    );
+  }
+
+  /// Removes the workout this app wrote under [clientRecordId].
+  Future<bool> deleteWorkout(String clientRecordId) async {
+    await _health.configure();
+    return _health.deleteByClientRecordId(
+      dataTypeKey: HealthDataType.WORKOUT,
+      clientRecordId: clientRecordId,
+    );
   }
 
   /// Whether [platformTotal] can answer here at all: Health Connect only.

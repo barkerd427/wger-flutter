@@ -27,6 +27,10 @@
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY"/>
 
+    <!-- Health Connect write permission for exporting finished workout
+         sessions, see HealthWorkoutExporter. Guarded by health_manifest_test.dart -->
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE"/>
+
     <queries>
         <intent>
             <action android:name="android.intent.action.VIEW" />
