@@ -79,6 +79,12 @@ void main() {
       }
     });
 
+    test('declares the workout write permission', () {
+      // HealthWorkoutExporter writes ExerciseSessionRecords; without the entry
+      // the snapshot reports the permission denied and nothing is exported
+      expect(manifest, contains('android:name="android.permission.health.WRITE_EXERCISE"'));
+    });
+
     test('declares the history permission', () {
       // Without it Health Connect silently caps every read at 30 days, which
       // makes the first import look complete while missing everything before

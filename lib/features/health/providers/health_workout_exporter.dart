@@ -83,8 +83,7 @@ class InMemoryWorkoutExportLedger implements WorkoutExportLedger {
   Future<WorkoutExportEntry?> get(String sessionId) async => entries[sessionId];
 
   @override
-  Future<void> put(WorkoutExportEntry entry) async =>
-      entries[entry.export.clientRecordId] = entry;
+  Future<void> put(WorkoutExportEntry entry) async => entries[entry.export.clientRecordId] = entry;
 
   @override
   Future<void> remove(String sessionId) async => entries.remove(sessionId);
